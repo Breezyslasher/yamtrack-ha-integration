@@ -56,12 +56,13 @@
     "error": {
       "cannot_connect": "Failed to connect to Yamtrack.",
       "invalid_auth": "The API key was rejected.",
-      "unhealthy": "Yamtrack answered but reported a problem. Check its logs.",
+      "unhealthy": "Yamtrack answered with an error: {error}",
       "invalid_region": "Use a two letter country code, for example US.",
       "target_required": "Choose a launch target for this launch method.",
       "target_remote": "Android TV Remote needs a remote entity as the launch target.",
       "target_media_player": "ADB needs an Android TV media player as the launch target.",
-      "plex_entity_required": "Plex only needs a Plex client."
+      "plex_entity_required": "Plex only needs a Plex client.",
+      "api_not_found": "No Yamtrack API at this URL. Use the Yamtrack image built from feat/justwatch-links (or feat/add-api) and the base URL, like http://192.168.1.10:8000."
     },
     "abort": {
       "already_configured": "This Yamtrack server is already configured.",

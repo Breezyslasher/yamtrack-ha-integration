@@ -19,7 +19,13 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import selector
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
-from .api import YamtrackApi, YamtrackAuthError, YamtrackConnectionError, YamtrackError
+from .api import (
+    YamtrackApi,
+    YamtrackAuthError,
+    YamtrackConnectionError,
+    YamtrackError,
+    YamtrackNotFoundError,
+)
 from .const import (
     COMMON_SERVICES,
     CONF_API_KEY,
@@ -58,20 +64,36 @@ PREFERENCE_KEYS = (
 
 async def validate_connection(
     hass: HomeAssistant, url: str, api_key: str
-) -> dict[str, str]:
-    """Check the health endpoint and the API key, returning form errors."""
+) -> tuple[dict[str, str], dict[str, str]]:
+    """Check the API and the API key, returning form errors and placeholders.
+
+    A failing health check only logs a warning: Yamtrack reports every check
+    (database, cache, Celery, Redis) and the API works even when Celery is down.
+    """
     api = YamtrackApi(async_get_clientsession(hass), url, api_key)
     try:
-        await api.health()
+        report = await api.health()
+        if (report or {}).get("status") != "ok":
+            failing = {
+                name: check.get("error")
+                for name, check in ((report or {}).get("checks") or {}).items()
+                if check.get("status") != "ok"
+            }
+            _LOGGER.warning(
+                "Yamtrack at %s reports failing health checks: %s", url, failing
+            )
         await api.validate_auth()
     except YamtrackAuthError:
-        return {"base": "invalid_auth"}
-    except YamtrackConnectionError:
-        return {"base": "cannot_connect"}
+        return {"base": "invalid_auth"}, {}
+    except YamtrackConnectionError as err:
+        _LOGGER.debug("Yamtrack connection failed: %s", err)
+        return {"base": "cannot_connect"}, {}
+    except YamtrackNotFoundError:
+        return {"base": "api_not_found"}, {}
     except YamtrackError as err:
-        _LOGGER.debug("Yamtrack validation failed: %s", err)
-        return {"base": "unhealthy"}
-    return {}
+        _LOGGER.warning("Yamtrack at %s answered with an error: %s", url, err)
+        return {"base": "unhealthy"}, {"error": str(err)[:200]}
+    return {}, {}
 
 
 async def fetch_service_names(api: YamtrackApi, region: str) -> list[str]:
@@ -207,11 +229,15 @@ class YamtrackConfigFlow(ConfigFlow, domain=DOMAIN):
     ) -> ConfigFlowResult:
         """Ask for the Yamtrack URL and API key."""
         errors: dict[str, str] = {}
+        placeholders: dict[str, str] = {"error": ""}
         if user_input is not None:
             url = user_input[CONF_URL].strip().rstrip("/")
             await self.async_set_unique_id(url.lower())
             self._abort_if_unique_id_configured()
-            errors = await validate_connection(self.hass, url, user_input[CONF_API_KEY])
+            errors, found = await validate_connection(
+                self.hass, url, user_input[CONF_API_KEY]
+            )
+            placeholders.update(found)
             if not errors:
                 self._data = {CONF_URL: url, CONF_API_KEY: user_input[CONF_API_KEY]}
                 return await self.async_step_region()
@@ -236,6 +262,7 @@ class YamtrackConfigFlow(ConfigFlow, domain=DOMAIN):
                 user_input,
             ),
             errors=errors,
+            description_placeholders=placeholders,
         )
 
     async def async_step_region(
@@ -294,10 +321,12 @@ class YamtrackConfigFlow(ConfigFlow, domain=DOMAIN):
     ) -> ConfigFlowResult:
         """Validate the new API key."""
         errors: dict[str, str] = {}
+        placeholders: dict[str, str] = {"error": ""}
         if user_input is not None:
-            errors = await validate_connection(
+            errors, found = await validate_connection(
                 self.hass, self._data[CONF_URL], user_input[CONF_API_KEY]
             )
+            placeholders.update(found)
             if not errors:
                 entry = self.hass.config_entries.async_get_entry(
                     self.context["entry_id"]
@@ -319,6 +348,7 @@ class YamtrackConfigFlow(ConfigFlow, domain=DOMAIN):
                 }
             ),
             errors=errors,
+            description_placeholders=placeholders,
         )
 
 

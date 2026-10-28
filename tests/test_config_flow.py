@@ -9,7 +9,12 @@ from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
 
 from .conftest import API_KEY, URL
-from custom_components.yamtrack.api import YamtrackAuthError, YamtrackConnectionError
+from custom_components.yamtrack.api import (
+    YamtrackApiError,
+    YamtrackAuthError,
+    YamtrackConnectionError,
+    YamtrackNotFoundError,
+)
 from custom_components.yamtrack.const import DOMAIN
 
 PREFERENCES = {
@@ -119,3 +124,43 @@ async def test_reauth(hass: HomeAssistant, setup_entry, mock_api) -> None:
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "reauth_successful"
     assert setup_entry.data["api_key"] == "new-key"
+
+
+async def test_failing_health_check_does_not_block(
+    hass: HomeAssistant, mock_api, caplog
+) -> None:
+    """A failing Celery check is logged, the working API key lets setup go on."""
+    mock_api["health"].return_value = {
+        "status": "unavailable",
+        "checks": {
+            "Database(alias='default')": {"status": "ok", "error": None},
+            "Ping": {"status": "error", "error": "No Celery workers"},
+        },
+    }
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN, context={"source": SOURCE_USER}
+    )
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {"url": URL, "api_key": API_KEY}
+    )
+    assert result["step_id"] == "region"
+    assert "No Celery workers" in caplog.text
+
+
+async def test_api_errors_are_specific(hass: HomeAssistant, mock_api) -> None:
+    """A missing API and an API error get their own messages."""
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN, context={"source": SOURCE_USER}
+    )
+    mock_api["validate_auth"].side_effect = YamtrackNotFoundError("/media/")
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {"url": URL, "api_key": API_KEY}
+    )
+    assert result["errors"] == {"base": "api_not_found"}
+
+    mock_api["validate_auth"].side_effect = YamtrackApiError(500, "Server Error")
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {"url": URL, "api_key": API_KEY}
+    )
+    assert result["errors"] == {"base": "unhealthy"}
+    assert result["description_placeholders"]["error"] == "HTTP 500: Server Error"
