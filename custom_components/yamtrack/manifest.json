@@ -1,0 +1,17 @@
+{
+  "domain": "yamtrack",
+  "name": "Yamtrack",
+  "codeowners": [
+    "@Breezyslasher"
+  ],
+  "config_flow": true,
+  "documentation": "https://github.com/Breezyslasher/yamtrack-ha-integration",
+  "integration_type": "service",
+  "iot_class": "local_polling",
+  "issue_tracker": "https://github.com/Breezyslasher/yamtrack-ha-integration/issues",
+  "requirements": [
+    "rapidfuzz>=3.6.0"
+  ],
+  "single_config_entry": true,
+  "version": "0.1.0"
+}

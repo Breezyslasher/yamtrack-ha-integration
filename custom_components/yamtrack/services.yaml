@@ -1,0 +1,56 @@
+search:
+  fields:
+    query:
+      required: true
+      example: "Dune 2021"
+      selector:
+        text:
+    media_type:
+      default: movie
+      selector:
+        select:
+          translation_key: media_type
+          options:
+            - movie
+            - tv
+    limit:
+      default: 5
+      selector:
+        number:
+          min: 1
+          max: 20
+          mode: box
+
+play:
+  fields:
+    query:
+      example: "Dune 2021"
+      selector:
+        text:
+    media_id:
+      example: "438631"
+      selector:
+        text:
+    media_type:
+      default: movie
+      selector:
+        select:
+          translation_key: media_type
+          options:
+            - movie
+            - tv
+    target:
+      selector:
+        entity:
+          domain:
+            - remote
+            - media_player
+    source_preference:
+      default: auto
+      selector:
+        select:
+          translation_key: source_preference
+          options:
+            - auto
+            - streaming
+            - library

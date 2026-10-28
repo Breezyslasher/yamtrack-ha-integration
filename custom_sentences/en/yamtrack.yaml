@@ -1,0 +1,20 @@
+# Copy this file to <config>/custom_sentences/en/yamtrack.yaml and restart
+# Home Assistant. {area} is the built-in list of your area names.
+language: "en"
+intents:
+  YamtrackPlayMedia:
+    data:
+      # Shows first, so "the show" isn't taken as part of a movie title
+      - sentences:
+          - "play the (show|series) {media} [on] [the] [{area}] tv"
+          - "put on the (show|series) {media} [on [the] [{area}] tv]"
+          - "watch the (show|series) {media} [on [the] [{area}] tv]"
+        slots:
+          media_type: tv
+      - sentences:
+          - "play [the movie] {media} [on] [the] [{area}] tv"
+          - "put on [the movie] {media} [on [the] [{area}] tv]"
+          - "watch [the movie] {media} [on [the] [{area}] tv]"
+lists:
+  media:
+    wildcard: true
