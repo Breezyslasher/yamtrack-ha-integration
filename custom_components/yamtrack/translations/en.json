@@ -1,0 +1,189 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Connect to Yamtrack",
+        "data": {
+          "url": "URL",
+          "api_key": "API key"
+        },
+        "data_description": {
+          "url": "Address of your Yamtrack server, for example http://192.168.1.10:8000.",
+          "api_key": "Found in Yamtrack under Settings, Integrations."
+        }
+      },
+      "region": {
+        "title": "Region",
+        "description": "Streaming availability depends on the country.",
+        "data": {
+          "region": "Region"
+        },
+        "data_description": {
+          "region": "Two letter ISO 3166-1 country code, for example US or GB."
+        }
+      },
+      "preferences": {
+        "title": "Preferences",
+        "data": {
+          "services": "My services",
+          "include_free": "Include free ad-supported services",
+          "prefer_library": "Prefer the Plex library first",
+          "launch_method": "Launch method",
+          "target": "Default launch target",
+          "plex_entity": "Plex client",
+          "plex_movie_library": "Plex movie library",
+          "plex_tv_library": "Plex TV library",
+          "track": "Mark as in progress on launch"
+        },
+        "data_description": {
+          "services": "Streaming services you subscribe to. Only these are used to start playback.",
+          "include_free": "Also use free services like Tubi or Pluto TV.",
+          "prefer_library": "Try Plex before streaming services when a title is in both.",
+          "launch_method": "How deep links are opened on the TV.",
+          "target": "A remote entity for Android TV Remote, or an Android TV media player for ADB.",
+          "plex_entity": "Media player used to play from the Plex library.",
+          "track": "Set the Yamtrack status to In progress when playback starts."
+        }
+      },
+      "reauth_confirm": {
+        "title": "Reauthenticate Yamtrack",
+        "description": "Yamtrack rejected the API key. Enter a new one.",
+        "data": {
+          "api_key": "API key"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Failed to connect to Yamtrack.",
+      "invalid_auth": "The API key was rejected.",
+      "unhealthy": "Yamtrack answered but reported a problem. Check its logs.",
+      "invalid_region": "Use a two letter country code, for example US.",
+      "target_required": "Choose a launch target for this launch method.",
+      "target_remote": "Android TV Remote needs a remote entity as the launch target.",
+      "target_media_player": "ADB needs an Android TV media player as the launch target.",
+      "plex_entity_required": "Plex only needs a Plex client."
+    },
+    "abort": {
+      "already_configured": "This Yamtrack server is already configured.",
+      "single_instance_allowed": "Only one Yamtrack server can be configured.",
+      "reauth_successful": "The API key was updated."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Region",
+        "description": "Streaming availability depends on the country.",
+        "data": {
+          "region": "Region"
+        },
+        "data_description": {
+          "region": "Two letter ISO 3166-1 country code, for example US or GB."
+        }
+      },
+      "preferences": {
+        "title": "Preferences",
+        "data": {
+          "services": "My services",
+          "include_free": "Include free ad-supported services",
+          "prefer_library": "Prefer the Plex library first",
+          "launch_method": "Launch method",
+          "target": "Default launch target",
+          "plex_entity": "Plex client",
+          "plex_movie_library": "Plex movie library",
+          "plex_tv_library": "Plex TV library",
+          "track": "Mark as in progress on launch"
+        },
+        "data_description": {
+          "services": "Streaming services you subscribe to. Only these are used to start playback.",
+          "include_free": "Also use free services like Tubi or Pluto TV.",
+          "prefer_library": "Try Plex before streaming services when a title is in both.",
+          "launch_method": "How deep links are opened on the TV.",
+          "target": "A remote entity for Android TV Remote, or an Android TV media player for ADB.",
+          "plex_entity": "Media player used to play from the Plex library.",
+          "track": "Set the Yamtrack status to In progress when playback starts."
+        }
+      }
+    },
+    "error": {
+      "invalid_region": "Use a two letter country code, for example US.",
+      "target_required": "Choose a launch target for this launch method.",
+      "target_remote": "Android TV Remote needs a remote entity as the launch target.",
+      "target_media_player": "ADB needs an Android TV media player as the launch target.",
+      "plex_entity_required": "Plex only needs a Plex client."
+    }
+  },
+  "selector": {
+    "launch_method": {
+      "options": {
+        "android_tv_remote": "Android TV Remote (Google TV)",
+        "adb": "Android TV via ADB (Fire TV, Android boxes)",
+        "plex_only": "Plex only"
+      }
+    },
+    "media_type": {
+      "options": {
+        "movie": "Movie",
+        "tv": "TV show"
+      }
+    },
+    "source_preference": {
+      "options": {
+        "auto": "Auto",
+        "streaming": "Streaming only",
+        "library": "Plex library only"
+      }
+    }
+  },
+  "services": {
+    "search": {
+      "name": "Search",
+      "description": "Searches Yamtrack and returns matching titles with their streaming services.",
+      "fields": {
+        "query": {
+          "name": "Query",
+          "description": "Title to search for. A trailing year narrows it down, like \"Dune 2021\"."
+        },
+        "media_type": {
+          "name": "Media type",
+          "description": "Movie or TV show."
+        },
+        "limit": {
+          "name": "Limit",
+          "description": "Maximum number of results."
+        }
+      }
+    },
+    "play": {
+      "name": "Play",
+      "description": "Finds a title and starts it on the TV from a streaming service or Plex.",
+      "fields": {
+        "query": {
+          "name": "Query",
+          "description": "Title to play. A trailing year narrows it down, like \"Dune 2021\"."
+        },
+        "media_id": {
+          "name": "Media ID",
+          "description": "TMDB ID of the title. Skips the search."
+        },
+        "media_type": {
+          "name": "Media type",
+          "description": "Movie or TV show."
+        },
+        "target": {
+          "name": "Target",
+          "description": "Entity to launch on. Defaults to the configured target."
+        },
+        "source_preference": {
+          "name": "Source preference",
+          "description": "Where to play from."
+        }
+      }
+    }
+  },
+  "exceptions": {
+    "not_loaded": {
+      "message": "Yamtrack is not set up or not loaded."
+    }
+  }
+}
