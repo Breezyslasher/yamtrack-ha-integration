@@ -79,6 +79,7 @@ async def test_play_streaming(
         "link": "https://www.netflix.com/watch/81000001",
         "media_id": "438631",
         "media_type": "movie",
+        "image": "https://img/dune2021.jpg",
     }
     assert len(launch_calls) == 1
     assert launch_calls[0].domain == "remote"

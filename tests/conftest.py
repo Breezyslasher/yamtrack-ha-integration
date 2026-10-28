@@ -10,6 +10,7 @@ import pytest
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from homeassistant.core import HomeAssistant, ServiceCall
+from homeassistant.setup import async_setup_component
 
 from custom_components.yamtrack.const import (
     CONF_API_KEY,
@@ -139,18 +140,26 @@ def mock_api() -> Generator[dict[str, AsyncMock]]:
         "providers": AsyncMock(return_value=PROVIDERS),
         "track": AsyncMock(return_value={}),
         "update_status": AsyncMock(return_value={}),
+        "media_list": AsyncMock(return_value=[]),
+        "lists": AsyncMock(return_value=[]),
+        "list_items": AsyncMock(return_value=[]),
+        "season_episodes": AsyncMock(return_value=[]),
+        "calendar": AsyncMock(return_value=[]),
     }
     with patch.multiple("custom_components.yamtrack.api.YamtrackApi", **mocks):
         yield mocks
 
 
 @pytest.fixture
-def launch_calls(hass: HomeAssistant) -> list[ServiceCall]:
+async def launch_calls(hass: HomeAssistant) -> list[ServiceCall]:
     """Register fake launcher actions and record their calls."""
     calls: list[ServiceCall] = []
 
     async def record(call: ServiceCall) -> None:
         calls.append(call)
+
+    # Load media_player first so it doesn't replace the fake play_media later
+    assert await async_setup_component(hass, "media_player", {})
 
     hass.services.async_register("remote", "turn_on", record)
     hass.services.async_register("androidtv", "adb_command", record)

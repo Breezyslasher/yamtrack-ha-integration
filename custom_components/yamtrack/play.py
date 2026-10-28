@@ -55,6 +55,7 @@ from .const import (
     YEAR_MISMATCH_PENALTY,
 )
 from .coordinator import YamtrackCoordinator
+from .next_episode import NextEpisode, Unaired, async_find_next_episode
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -85,6 +86,10 @@ class PlayResult:
     link: str | None = None
     media_id: str | None = None
     media_type: str | None = None
+    image: str | None = None
+    season_number: int | None = None
+    episode_number: int | None = None
+    episode_title: str | None = None
     error: str | None = None
     message: str | None = None
 
@@ -99,7 +104,17 @@ class PlayResult:
         if self.success:
             data.pop("error")
             data.pop("message")
+        if self.season_number is None:
+            for key in ("season_number", "episode_number", "episode_title"):
+                data.pop(key)
         return data
+
+    @property
+    def episode_label(self) -> str | None:
+        """Return "season 2 episode 3" for a show's episode."""
+        if self.season_number is None or self.episode_number is None:
+            return None
+        return f"season {self.season_number} episode {self.episode_number}"
 
 
 def get_options(options: dict[str, Any]) -> dict[str, Any]:
@@ -373,8 +388,22 @@ async def launch_link(
         raise LaunchError(str(err)) from err
 
 
-def plex_payload(media_type: str, library: str, title: str) -> tuple[str, str]:
-    """Return the media content type and plex:// ID for a title."""
+def plex_payload(
+    media_type: str,
+    library: str,
+    title: str,
+    episode: NextEpisode | None = None,
+) -> tuple[str, str]:
+    """Return the media content type and plex:// ID for a title or an episode."""
+    if media_type == MEDIA_TV and episode is not None:
+        query = {
+            "library_name": library,
+            "show.title": title,
+            "season.index": episode.season_number,
+            "episode.index": episode.episode_number,
+            "libtype": "episode",
+        }
+        return "episode", "plex://" + json.dumps(query)
     # Plex picks the exact title when several match, which needs the "title" key
     if media_type == MEDIA_TV:
         query = {"library_name": library, "title": title, "libtype": "show"}
@@ -391,11 +420,12 @@ async def launch_plex(
     media_type: str,
     library: str,
     title: str,
+    episode: NextEpisode | None = None,
 ) -> None:
-    """Play a title from the Plex library."""
+    """Play a title, or one episode of a show, from the Plex library."""
     if not entity_id:
         raise LaunchError("No Plex client configured")
-    content_type, content_id = plex_payload(media_type, library, title)
+    content_type, content_id = plex_payload(media_type, library, title, episode)
     try:
         await hass.services.async_call(
             "media_player",
@@ -461,8 +491,16 @@ async def async_play(
     media_type: str = "movie",
     target: str | None = None,
     source_preference: str = PREFERENCE_AUTO,
+    season: int | None = None,
+    episode: int | None = None,
+    unaired: Unaired | None = None,
 ) -> PlayResult:
-    """Find a title and start it on the TV."""
+    """Find a title and start it on the TV.
+
+    For a show, the episode is the given season and episode, else the next
+    unwatched one from Yamtrack progress. Plex plays that episode; streaming
+    services open the show, as JustWatch only links shows.
+    """
     options = get_options(options)
     method = options[CONF_LAUNCH_METHOD]
     target = target or options[CONF_TARGET]
@@ -495,8 +533,20 @@ async def async_play(
         )
 
     result = PlayResult(
-        title=candidate.title, media_id=candidate.media_id, media_type=media_type
+        title=candidate.title,
+        media_id=candidate.media_id,
+        media_type=media_type,
+        image=candidate.image,
     )
+    next_episode = None
+    if media_type == MEDIA_TV:
+        next_episode = await resolve_episode(
+            coordinator, candidate, season, episode, unaired
+        )
+    if next_episode is not None:
+        result.season_number = next_episode.season_number
+        result.episode_number = next_episode.episode_number
+        result.episode_title = next_episode.episode_title
 
     # Decide which sources to try, in order
     use_streaming = (
@@ -519,7 +569,12 @@ async def async_play(
         if source == PLAYED_VIA_PLEX:
             try:
                 await launch_plex(
-                    hass, plex_client, media_type, library, candidate.title
+                    hass,
+                    plex_client,
+                    media_type,
+                    library,
+                    candidate.title,
+                    next_episode,
                 )
             except LaunchError as err:
                 _LOGGER.debug("Plex couldn't play %s: %s", candidate.title, err)
@@ -570,6 +625,34 @@ async def async_play(
     if options[CONF_TRACK]:
         await mark_in_progress(coordinator, candidate)
     return result
+
+
+async def resolve_episode(
+    coordinator: YamtrackCoordinator,
+    candidate: Candidate,
+    season: int | None,
+    episode: int | None,
+    unaired: Unaired | None,
+) -> NextEpisode | None:
+    """Return the requested episode, or the next one to watch."""
+    if season is not None and episode is not None:
+        return NextEpisode(
+            media_id=candidate.media_id,
+            show_title=candidate.title,
+            season_number=season,
+            episode_number=episode,
+        )
+    try:
+        # Progress changes as episodes are watched, so this isn't cached
+        return await async_find_next_episode(
+            coordinator.api,
+            candidate.media_id,
+            unaired=unaired,
+            source=candidate.source,
+        )
+    except YamtrackError as err:
+        _LOGGER.debug("No next episode for %s: %s", candidate.title, err)
+        return None
 
 
 async def mark_in_progress(

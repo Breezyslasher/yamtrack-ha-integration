@@ -184,3 +184,56 @@ class YamtrackApi:
             f"/media/{media_type}/{source}/{media_id}/",
             json={"status": status},
         )
+
+    async def media_list(
+        self,
+        *,
+        status: int | None = None,
+        sort: str | None = None,
+        limit: int = 20,
+        exclude: list[str] | None = None,
+    ) -> list[dict[str, Any]]:
+        """Return the user's tracked media, optionally filtered by status."""
+        params: dict[str, Any] = {"limit": limit}
+        if status is not None:
+            params["status"] = status
+        if sort:
+            params["sort"] = sort
+        if exclude:
+            params["exclude"] = ",".join(exclude)
+        data = await self._request("GET", "/media/", params=params)
+        return list((data or {}).get("results") or [])
+
+    async def lists(self, limit: int = 100) -> list[dict[str, Any]]:
+        """Return the user's custom lists."""
+        data = await self._request("GET", "/lists/", params={"limit": limit})
+        return list((data or {}).get("results") or [])
+
+    async def list_items(self, list_id: int, limit: int = 200) -> list[dict[str, Any]]:
+        """Return the items of a custom list."""
+        data = await self._request(
+            "GET", f"/lists/{list_id}/items/", params={"limit": limit}
+        )
+        return list((data or {}).get("results") or [])
+
+    async def season_episodes(
+        self, source: str, media_id: str, season_number: int
+    ) -> list[dict[str, Any]]:
+        """Return the episodes of a season with whether each one was watched."""
+        data = await self._request(
+            "GET",
+            f"/media/tv/{source}/{media_id}/{season_number}/episodes/",
+            params={"limit": 200},
+        )
+        return list((data or {}).get("results") or [])
+
+    async def calendar(
+        self, start_date: str, end_date: str, limit: int = 200
+    ) -> list[dict[str, Any]]:
+        """Return the release events of tracked media between two dates."""
+        data = await self._request(
+            "GET",
+            "/calendar/",
+            params={"start_date": start_date, "end_date": end_date, "limit": limit},
+        )
+        return list((data or {}).get("results") or [])

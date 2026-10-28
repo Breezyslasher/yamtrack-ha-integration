@@ -157,7 +157,7 @@
     },
     "play": {
       "name": "Play",
-      "description": "Finds a title and starts it on the TV from a streaming service or Plex.",
+      "description": "Finds a title and starts it on the TV from a streaming service or Plex. Shows play their next unwatched episode.",
       "fields": {
         "query": {
           "name": "Query",
@@ -178,6 +178,14 @@
         "source_preference": {
           "name": "Source preference",
           "description": "Where to play from."
+        },
+        "season": {
+          "name": "Season",
+          "description": "Season of the episode to play, with Episode. Without them, a show plays its next unwatched episode."
+        },
+        "episode": {
+          "name": "Episode",
+          "description": "Episode number in the season, with Season."
         }
       }
     }
@@ -185,6 +193,19 @@
   "exceptions": {
     "not_loaded": {
       "message": "Yamtrack is not set up or not loaded."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "currently_watching": {
+        "name": "Currently watching"
+      },
+      "up_next": {
+        "name": "Up next"
+      },
+      "recently_completed": {
+        "name": "Recently completed"
+      }
     }
   }
 }

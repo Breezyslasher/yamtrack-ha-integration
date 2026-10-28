@@ -24,4 +24,12 @@ async def async_get_config_entry_diagnostics(
             "options": dict(entry.options),
         },
         "cache_size": coordinator.cache_size,
+        "library": {
+            "watching": len(library.data.watching),
+            "completed": len(library.data.completed),
+            "up_next": [episode.as_dict() for episode in library.data.up_next],
+            "unaired": len(library.data.unaired),
+        }
+        if (library := entry.runtime_data.library).data
+        else None,
     }

@@ -47,7 +47,12 @@ PREFERENCE_LIBRARY: Final = "library"
 SOURCE_PREFERENCES: Final = [PREFERENCE_AUTO, PREFERENCE_STREAMING, PREFERENCE_LIBRARY]
 
 # Yamtrack media status values used by the API
+STATUS_PLANNING: Final = 0
 STATUS_IN_PROGRESS: Final = 1
+STATUS_COMPLETED: Final = 3
+
+# Media types the media list leaves out: everything that isn't a movie or show
+NON_VIDEO_TYPES: Final = ["anime", "manga", "game", "book", "comic", "boardgame"]
 
 # Results of yamtrack.play
 PLAYED_VIA_STREAMING: Final = "streaming"
@@ -69,11 +74,18 @@ ATTR_MEDIA_TYPE: Final = "media_type"
 ATTR_LIMIT: Final = "limit"
 ATTR_TARGET: Final = "target"
 ATTR_SOURCE_PREFERENCE: Final = "source_preference"
+ATTR_SEASON: Final = "season"
+ATTR_EPISODE: Final = "episode"
 
 REQUEST_TIMEOUT: Final = 10
 REQUEST_RETRIES: Final = 2
 CACHE_TTL: Final = timedelta(hours=6)
 NO_LINKS_WARNING_INTERVAL: Final = timedelta(days=1)
+
+LIBRARY_UPDATE_INTERVAL: Final = timedelta(minutes=15)
+LIBRARY_ITEMS: Final = 10
+UP_NEXT_MAX_SHOWS: Final = 10
+BROWSE_LIMIT: Final = 100
 
 SEARCH_LIMIT: Final = 5
 MATCH_THRESHOLD: Final = 70

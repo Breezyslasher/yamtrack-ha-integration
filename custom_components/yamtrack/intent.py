@@ -91,9 +91,12 @@ def speech_for(result, media: str) -> str:
         return f"I couldn't find {result.title} on your services."
     if result.error == ERROR_LAUNCH_FAILED:
         return f"I couldn't start {result.title} on the TV."
+    title = result.title
+    if result.episode_label:
+        title = f"{title} {result.episode_label}"
     if result.played_via == PLAYED_VIA_PLEX:
-        return f"Playing {result.title} from Plex."
-    return f"Playing {result.title} on {result.provider}."
+        return f"Playing {title} from Plex."
+    return f"Playing {title} on {result.provider}."
 
 
 def find_area_target(hass: HomeAssistant, area_name: str, method: str) -> str | None:

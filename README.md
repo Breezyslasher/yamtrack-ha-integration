@@ -66,8 +66,12 @@ data:
 response_variable: played
 ```
 
-Response on success: `{title, played_via, provider, link, media_id, media_type}`, where
-`played_via` is `streaming` or `plex`. On failure: `{error, message, ...}` with `error` one of
+For a show, add `season` and `episode` to play a specific episode. Without them the show plays its
+next unwatched episode (see [TV episodes](#tv-episodes)).
+
+Response on success: `{title, played_via, provider, link, media_id, media_type, image}`, plus
+`season_number`, `episode_number` and `episode_title` for a show's episode. `played_via` is
+`streaming` or `plex`. On failure: `{error, message, ...}` with `error` one of
 `not_found`, `no_provider`, `launch_failed`. Without a `response_variable`, a failure raises an error instead.
 
 Each successful play fires the event `yamtrack_play_started` with the response as its data.
@@ -92,6 +96,46 @@ Each successful play fires the event `yamtrack_play_started` with the response a
    with ADB debugging enabled on the TV) if you want Netflix titles to start playing.
 6. If no offer matched or the launch failed, and Plex wasn't tried yet, try Plex.
 7. Set the Yamtrack status to In progress (starts tracking it if needed).
+
+## TV episodes
+
+When you play a show you track in Yamtrack, the integration finds the next episode to watch. It goes
+through the seasons in order, skips specials and seasons marked completed, and picks the first episode
+you haven't watched. It stops at episodes that haven't aired yet, using the Yamtrack calendar.
+
+- **Plex** plays that exact episode (`show.title`, `season.index`, `episode.index`).
+- **Streaming services** open the show, because JustWatch only has links for whole shows. Netflix and most
+  apps then resume where your profile left off.
+- The response, the `yamtrack_play_started` event and the spoken reply name the episode: "Playing
+  Severance season 2 episode 3 on Netflix."
+
+Shows you don't track, or where everything aired is watched, play as before.
+
+## Sensors
+
+Updated every 15 minutes and after each play. Each one lists up to 10 entries in its `items` attribute,
+and its picture is the first entry's image.
+
+| Sensor | State | `items` |
+|---|---|---|
+| `sensor.yamtrack_currently_watching` | Number of movies and shows in progress | `title`, `media_type`, `media_id`, `image`, `progress` |
+| `sensor.yamtrack_up_next` | Next episode of the most recently updated show, like `Severance S02E03` | `show_title`, `season_number`, `episode_number`, `episode_title`, `label`, `image` |
+| `sensor.yamtrack_recently_completed` | Last movie or show you completed | `title`, `media_type`, `end_date`, `score`, `image` |
+
+Up next looks at the 10 most recently updated shows in progress.
+
+## Media browser
+
+Open **Media** in the sidebar and choose **Yamtrack** as the player (bottom right). You can browse:
+
+- **Up next**: the next episode of each show you're watching
+- **Currently watching**
+- **Watchlist**: movies and shows marked *Planning*
+- **Lists**: your Yamtrack lists
+
+Press play on a title and it launches on your TV the same way `yamtrack.play` does. The Yamtrack player shows
+the last title started. This is a media player entity rather than a media source: a media source can
+only hand a player a stream URL, which can't start a streaming app on a TV.
 
 ## Assist
 
@@ -155,5 +199,5 @@ venv/bin/ruff check . && venv/bin/ruff format --check .
 
 ## Roadmap
 
-- **v2**: browse Yamtrack lists in the media browser, next episode deep links for shows, up next / watching sensors.
+- **v2** (done): browse Yamtrack in the media browser, next episodes for shows, up next / watching / completed sensors.
 - **v3**: mark as completed when playback ends, rent or buy prompts for paid-only titles.
