@@ -70,14 +70,19 @@ class YamtrackApi:
         params: dict[str, Any] | None = None,
         json: dict[str, Any] | None = None,
         auth: bool = True,
+        retries: int = REQUEST_RETRIES,
+        allow_status: tuple[int, ...] = (),
     ) -> Any:
-        """Send a request, retrying on 5xx responses only."""
+        """Send a request, retrying on 5xx responses only.
+
+        Statuses in allow_status return their JSON body instead of raising.
+        """
         url = f"{self._base}{API_PREFIX}{path}"
         headers = {"Accept": "application/json"}
         if auth:
             headers["X-API-Key"] = self._api_key
 
-        for attempt in range(REQUEST_RETRIES + 1):
+        for attempt in range(retries + 1):
             try:
                 async with self._session.request(
                     method,
@@ -87,7 +92,9 @@ class YamtrackApi:
                     headers=headers,
                     timeout=aiohttp.ClientTimeout(total=REQUEST_TIMEOUT),
                 ) as resp:
-                    if resp.status >= 500 and attempt < REQUEST_RETRIES:
+                    if resp.status in allow_status:
+                        return await resp.json(content_type=None)
+                    if resp.status >= 500 and attempt < retries:
                         _LOGGER.debug(
                             "Yamtrack %s %s returned %s, retrying",
                             method,
@@ -114,8 +121,18 @@ class YamtrackApi:
         raise YamtrackConnectionError(f"Yamtrack at {self._base} kept failing")
 
     async def health(self) -> dict[str, Any]:
-        """Return the health check, raising if Yamtrack is unhealthy."""
-        return await self._request("GET", "/health/", auth=False)
+        """Return the health check report.
+
+        Yamtrack answers 500 with the report when one of its checks (database,
+        cache, Celery, Redis) fails, so that body is returned, not raised.
+        """
+        try:
+            return await self._request(
+                "GET", "/health/", auth=False, retries=0, allow_status=(500,)
+            )
+        except ValueError:
+            # A 500 that isn't JSON, like a proxy error page
+            raise YamtrackApiError(500, "Health check failed") from None
 
     async def validate_auth(self) -> None:
         """Make one authenticated call to check the API key."""

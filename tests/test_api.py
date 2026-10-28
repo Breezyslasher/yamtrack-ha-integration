@@ -92,3 +92,24 @@ async def test_track_and_update(
         "status": 1,
     }
     assert aioclient_mock.mock_calls[1][2] == {"status": 1}
+
+
+async def test_health_returns_failing_report(
+    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+) -> None:
+    """A 500 health report is returned once, without retries."""
+    report = {"status": "unavailable", "checks": {"Ping": {"status": "error"}}}
+    aioclient_mock.get(f"{URL}/api/v1/health/", status=500, json=report)
+    assert await make_api(hass).health() == report
+    assert aioclient_mock.call_count == 1
+
+
+async def test_health_non_json_500(
+    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+) -> None:
+    """A 500 that isn't a report is an API error."""
+    aioclient_mock.get(
+        f"{URL}/api/v1/health/", status=500, text="<html>Bad Gateway</html>"
+    )
+    with pytest.raises(YamtrackApiError):
+        await make_api(hass).health()
