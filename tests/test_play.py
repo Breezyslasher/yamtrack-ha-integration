@@ -9,6 +9,7 @@ import pytest
 from .conftest import PROVIDERS, provider
 from custom_components.yamtrack.play import (
     Candidate,
+    adb_command,
     normalize_service,
     plex_payload,
     rank_candidates,
@@ -139,3 +140,11 @@ def test_plex_payload() -> None:
     }
     content_type, content_id = plex_payload("tv", "TV Shows", "Severance")
     assert json.loads(content_id.removeprefix("plex://"))["libtype"] == "show"
+
+
+def test_adb_command_plain_link() -> None:
+    """Apps without options get a plain VIEW intent with the link quoted."""
+    assert adb_command("Max", "https://play.max.com/movie/a?b=1&c=2") == (
+        "am start -a android.intent.action.VIEW -d "
+        "'https://play.max.com/movie/a?b=1&c=2'"
+    )

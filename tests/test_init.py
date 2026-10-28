@@ -129,7 +129,9 @@ async def test_play_adb(hass: HomeAssistant, options, mock_api, launch_calls) ->
     assert launch_calls[0].domain == "androidtv"
     assert launch_calls[0].data["command"] == (
         "am start -a android.intent.action.VIEW -d "
-        "https://www.netflix.com/watch/81000001"
+        "https://www.netflix.com/watch/81000001 "
+        "-c android.intent.category.LEANBACK_LAUNCHER -f 0x10808000 "
+        "-e source 30 com.netflix.ninja/.MainActivity"
     )
 
 

@@ -83,7 +83,13 @@ Each successful play fires the event `yamtrack_play_started` with the response a
 4. Rewrite the link where needed, for example Netflix `/title/{id}` becomes `/watch/{id}` so playback starts right away.
 5. Launch it:
    - `android_tv_remote`: `remote.turn_on` with `activity: <link>`
-   - `adb`: `androidtv.adb_command` with `am start -a android.intent.action.VIEW -d '<link>'`
+   - `adb`: `androidtv.adb_command` with `am start -a android.intent.action.VIEW -d '<link>'`.
+     Netflix gets extra intent options (`-e source 30 com.netflix.ninja/.MainActivity`) so the movie starts
+     instead of only opening the app.
+
+   With Android TV Remote, Netflix often opens without playing, because only a link can be sent that way.
+   Use the ADB method (the [Android TV](https://www.home-assistant.io/integrations/androidtv/) integration
+   with ADB debugging enabled on the TV) if you want Netflix titles to start playing.
 6. If no offer matched or the launch failed, and Plex wasn't tried yet, try Plex.
 7. Set the Yamtrack status to In progress (starts tracking it if needed).
 

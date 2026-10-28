@@ -294,6 +294,24 @@ _LINK_REWRITES: dict[str, list[tuple[re.Pattern[str], str]]] = {
 }
 
 
+# Extra ADB intent options for TV apps that open without playing a plain link.
+# The Netflix TV app (com.netflix.ninja) starts playback only with source 30.
+_ADB_INTENT_OPTIONS: dict[str, str] = {
+    "netflix": (
+        "-c android.intent.category.LEANBACK_LAUNCHER -f 0x10808000 "
+        "-e source 30 com.netflix.ninja/.MainActivity"
+    ),
+}
+
+
+def adb_command(provider_name: str | None, link: str) -> str:
+    """Return the ADB command that opens a link, with any per-app options."""
+    command = "am start -a android.intent.action.VIEW -d " + shlex.quote(link)
+    if options := _ADB_INTENT_OPTIONS.get(normalize_service(provider_name)):
+        command += " " + options
+    return command
+
+
 def rewrite_link(provider_name: str | None, link: str) -> str:
     """Apply the per-provider link rewrites."""
     for pattern, replacement in _LINK_REWRITES.get(
@@ -329,7 +347,11 @@ class LaunchError(HomeAssistantError):
 
 
 async def launch_link(
-    hass: HomeAssistant, method: str, target: str | None, link: str
+    hass: HomeAssistant,
+    method: str,
+    target: str | None,
+    link: str,
+    provider_name: str | None = None,
 ) -> None:
     """Open a deep link on the TV."""
     if not target:
@@ -339,12 +361,7 @@ async def launch_link(
         data = {"entity_id": target, "activity": link}
     elif method == LAUNCH_ADB:
         domain, service = "androidtv", "adb_command"
-        data = {
-            "entity_id": target,
-            "command": (
-                "am start -a android.intent.action.VIEW -d " + shlex.quote(link)
-            ),
-        }
+        data = {"entity_id": target, "command": adb_command(provider_name, link)}
     else:
         raise LaunchError(f"Launch method {method} cannot open links")
 
@@ -527,7 +544,7 @@ async def async_play(
             continue
         link = rewrite_link(offer.get("provider_name"), offer["link"])
         try:
-            await launch_link(hass, method, target, link)
+            await launch_link(hass, method, target, link, offer.get("provider_name"))
         except LaunchError as err:
             _LOGGER.warning(
                 "Couldn't open %s on %s: %s", offer.get("provider_name"), target, err
