@@ -1,0 +1,73 @@
+blueprint:
+  name: Yamtrack - play a title
+  description: >-
+    A script that plays a movie or show through Yamtrack. Call it from a
+    dashboard button or another automation with a "query" field, like
+    "Dune 2021". Optionally sends a notification when nothing could be played.
+  domain: script
+  author: Yamtrack integration
+  homeassistant:
+    min_version: 2024.8.0
+  source_url: https://github.com/Breezyslasher/yamtrack-ha-integration/blob/main/blueprints/script/yamtrack/play_title.yaml
+  input:
+    target:
+      name: TV
+      description: Leave empty to use the TV set in the Yamtrack options.
+      default: ""
+      selector:
+        entity:
+          filter:
+            - domain:
+                - remote
+                - media_player
+    notify_action:
+      name: Notify action on failure
+      description: >-
+        A notify action, like notify.mobile_app_my_phone. Leave empty for no
+        notification.
+      default: ""
+      selector:
+        text:
+
+fields:
+  query:
+    name: Title
+    description: Movie or show to play. Add a year to pick a release.
+    required: true
+    example: Dune 2021
+    selector:
+      text:
+  media_type:
+    name: Media type
+    default: movie
+    selector:
+      select:
+        options:
+          - label: Movie
+            value: movie
+          - label: TV show
+            value: tv
+
+mode: queued
+
+variables:
+  target: !input target
+  notify_action: !input notify_action
+
+sequence:
+  - action: yamtrack.play
+    data: >-
+      {% set data = {'query': query, 'media_type': media_type | default('movie')} %}
+      {% if target %}{% set data = dict(data, target=target) %}{% endif %}
+      {{ data }}
+    response_variable: result
+  - if:
+      - condition: template
+        value_template: "{{ result.error is defined and notify_action != '' }}"
+    then:
+      - action: "{{ notify_action }}"
+        data:
+          title: Yamtrack
+          message: "{{ result.message }}"
+  - stop: Done
+    response_variable: result

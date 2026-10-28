@@ -102,6 +102,36 @@ entity in that area, and the default target otherwise. Without "the show", a tit
 movie is tried as a TV show. Replies: "Playing Dune on Netflix.", "Playing Dune from Plex.",
 "I couldn't find Dune on your services."
 
+## Blueprints
+
+Ready-made automation templates. Click a button to import one, or copy the files from
+[`blueprints/`](blueprints) into `<config>/blueprints/`. Then go to **Settings → Automations & scenes → Blueprints**
+and create an automation (or script) from it.
+
+| Blueprint | What it does | Import |
+|---|---|---|
+| **Play what I type** (`automation/yamtrack/play_from_text.yaml`) | Type a title into an `input_text` helper and it starts on the TV. Pick the media type, TV and source, run actions when it starts or fails, and clear the box afterwards. | [![Import blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2FBreezyslasher%2Fyamtrack-ha-integration%2Fblob%2Fmain%2Fblueprints%2Fautomation%2Fyamtrack%2Fplay_from_text.yaml) |
+| **When playback starts** (`automation/yamtrack/playback_started.yaml`) | Runs your actions on every `yamtrack_play_started` event, like dimming the lights. Can be limited to movies or shows, and to streaming or Plex. | [![Import blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2FBreezyslasher%2Fyamtrack-ha-integration%2Fblob%2Fmain%2Fblueprints%2Fautomation%2Fyamtrack%2Fplayback_started.yaml) |
+| **Play a title** (`script/yamtrack/play_title.yaml`) | A script with a `query` field for dashboard buttons and other automations. It returns the play result and can notify your phone when nothing could be played. | [![Import blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2FBreezyslasher%2Fyamtrack-ha-integration%2Fblob%2Fmain%2Fblueprints%2Fscript%2Fyamtrack%2Fplay_title.yaml) |
+
+Actions in these blueprints get a `result` variable with the `yamtrack.play` response, for example
+`{{ result.title }}`, `{{ result.provider }}`, or `{{ result.error }}` when it failed.
+
+For **Play what I type**, first create the text box: **Settings → Devices & services → Helpers → Create helper → Text**.
+
+A dashboard button for the **Play a title** script:
+
+```yaml
+type: button
+name: Dune
+icon: mdi:movie-open-play
+tap_action:
+  action: perform-action
+  perform_action: script.play_title
+  data:
+    query: Dune 2021
+```
+
 ## Caching and errors
 
 - Search, details and provider responses are cached for 6 hours. Changing the options clears the cache.
