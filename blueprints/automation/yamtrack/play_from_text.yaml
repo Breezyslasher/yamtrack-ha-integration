@@ -1,0 +1,114 @@
+blueprint:
+  name: Yamtrack - play what I type
+  description: >-
+    Type a movie or show into a text helper (input_text) and Yamtrack starts it
+    on the TV. Add a year to pick a release, like "Dune 2021". Optionally run
+    actions when it starts or when it fails.
+  domain: automation
+  author: Yamtrack integration
+  homeassistant:
+    min_version: 2024.8.0
+  source_url: https://github.com/Breezyslasher/yamtrack-ha-integration/blob/main/blueprints/automation/yamtrack/play_from_text.yaml
+  input:
+    text_entity:
+      name: Text box
+      description: The input_text helper you type the title into.
+      selector:
+        entity:
+          filter:
+            - domain: input_text
+    media_type:
+      name: Media type
+      default: movie
+      selector:
+        select:
+          options:
+            - label: Movie
+              value: movie
+            - label: TV show
+              value: tv
+    target:
+      name: TV
+      description: Leave empty to use the TV set in the Yamtrack options.
+      default: ""
+      selector:
+        entity:
+          filter:
+            - domain:
+                - remote
+                - media_player
+    source_preference:
+      name: Play from
+      default: auto
+      selector:
+        select:
+          options:
+            - label: Auto (follow the Yamtrack options)
+              value: auto
+            - label: Streaming services only
+              value: streaming
+            - label: Plex library only
+              value: library
+    clear_text:
+      name: Clear the text box afterwards
+      default: true
+      selector:
+        boolean:
+    started_actions:
+      name: When it starts
+      description: >-
+        Runs after playback starts. The variable "result" has title,
+        played_via, provider and link.
+      default: []
+      selector:
+        action:
+    failed_actions:
+      name: When it fails
+      description: >-
+        Runs when nothing could be played. The variable "result" has error
+        (not_found, no_provider or launch_failed) and message.
+      default: []
+      selector:
+        action:
+
+mode: single
+max_exceeded: silent
+
+trigger:
+  - platform: state
+    entity_id: !input text_entity
+
+variables:
+  text_entity: !input text_entity
+  media_type: !input media_type
+  target: !input target
+  source_preference: !input source_preference
+  clear_text: !input clear_text
+  query: "{{ trigger.to_state.state | trim }}"
+
+condition:
+  - condition: template
+    value_template: "{{ query not in ['', 'unknown', 'unavailable'] }}"
+
+action:
+  - action: yamtrack.play
+    data: >-
+      {% set data = {'query': query, 'media_type': media_type,
+                     'source_preference': source_preference} %}
+      {% if target %}{% set data = dict(data, target=target) %}{% endif %}
+      {{ data }}
+    response_variable: result
+  - if:
+      - condition: template
+        value_template: "{{ result.error is defined }}"
+    then: !input failed_actions
+    else: !input started_actions
+  - if:
+      - condition: template
+        value_template: "{{ clear_text }}"
+    then:
+      - action: input_text.set_value
+        target:
+          entity_id: "{{ text_entity }}"
+        data:
+          value: ""

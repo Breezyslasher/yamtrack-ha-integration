@@ -1,0 +1,62 @@
+blueprint:
+  name: Yamtrack - when playback starts
+  description: >-
+    Runs your actions whenever Yamtrack starts a movie or show, for example to
+    dim the lights or close the blinds. Can be limited to movies or shows, and
+    to streaming or Plex.
+  domain: automation
+  author: Yamtrack integration
+  homeassistant:
+    min_version: 2024.8.0
+  source_url: https://github.com/Breezyslasher/yamtrack-ha-integration/blob/main/blueprints/automation/yamtrack/playback_started.yaml
+  input:
+    media_type:
+      name: Only for
+      default: any
+      selector:
+        select:
+          options:
+            - label: Movies and shows
+              value: any
+            - label: Movies
+              value: movie
+            - label: TV shows
+              value: tv
+    played_via:
+      name: Only when playing from
+      default: any
+      selector:
+        select:
+          options:
+            - label: Anywhere
+              value: any
+            - label: Streaming services
+              value: streaming
+            - label: Plex
+              value: plex
+    started_actions:
+      name: Actions
+      description: >-
+        The variable "result" has title, media_type, played_via, provider and
+        link, for example "Now playing {{ result.title }}".
+      selector:
+        action:
+
+mode: queued
+
+trigger:
+  - platform: event
+    event_type: yamtrack_play_started
+
+variables:
+  media_type: !input media_type
+  played_via: !input played_via
+  result: "{{ trigger.event.data }}"
+
+condition:
+  - condition: template
+    value_template: "{{ media_type == 'any' or result.media_type == media_type }}"
+  - condition: template
+    value_template: "{{ played_via == 'any' or result.played_via == played_via }}"
+
+action: !input started_actions
